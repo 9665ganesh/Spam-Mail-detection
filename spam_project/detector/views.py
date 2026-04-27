@@ -13,9 +13,9 @@ lr = pickle.load(open(os.path.join(BASE_DIR, 'lr.pkl'),'rb'))
 
 # Model info
 model_info = {
-    "Naive Bayes": {"accuracy": "97%", "recall": "0.83"},
-    "SVM": {"accuracy": "98%", "recall": "0.90"},
-    "Logistic Regression": {"accuracy": "98%", "recall": "0.94"}
+    "Naive Bayes": {"accuracy": "96%", "acc_val": 96.00, "f1_val": 94.00},
+    "SVM": {"accuracy": "97%", "acc_val": 97.00, "f1_val": 95.00},
+    "Logistic Regression": {"accuracy": "95%", "acc_val": 95.00, "f1_val": 92.00}
 }
 
 model_objects = {
@@ -24,8 +24,15 @@ model_objects = {
     "Logistic Regression": lr,
 }
 
-def recall_value(recall_text):
-    return float(str(recall_text).strip())
+def get_spam_reasons(text):
+    text_lower = text.lower()
+    spam_keywords = [
+        "free", "win", "prize", "money", "urgent", "click", "guarantee", 
+        "offer", "discount", "winner", "cash", "lottery", "claim", "limited", 
+        "congratulations", "act now", "100%", "urgent", "important", "alert"
+    ]
+    found = [kw for kw in spam_keywords if kw in text_lower]
+    return found
 
 def home(request):
     results = {}
@@ -46,7 +53,8 @@ def home(request):
                 results[model_name] = {
                     "prediction": "Spam" if prediction else "Not Spam",
                     "accuracy": model_info[model_name]["accuracy"],
-                    "recall": model_info[model_name]["recall"],
+                    "acc_val": model_info[model_name]["acc_val"],
+                    "f1_val": model_info[model_name]["f1_val"],
                 }
 
             selected_result = results.get(selected_model)
@@ -56,7 +64,9 @@ def home(request):
         "message": message,
         "selected_model": selected_model,
         "selected_result": selected_result,
+        "spam_reasons": get_spam_reasons(message) if selected_result and selected_result['prediction'] == 'Spam' else [],
         "model_choices": list(model_objects.keys()),
-        "best_model": max(model_info, key=lambda name: recall_value(model_info[name]["recall"])),
+        "best_model": max(model_info, key=lambda name: model_info[name]["f1_val"]),
+        "best_model_prediction": results.get(max(model_info, key=lambda name: model_info[name]["f1_val"]), {}).get("prediction") if results else None,
     }
     return render(request, "index.html", context)
